@@ -1,20 +1,55 @@
-### Roadmap Explained
+# EVM Directory API
 
-For tracking Real-World Asset (RWA) escrow, Roofstock onChain is a prime example because it uses a specific "Escrow Vault" pattern to handle property sales.
-Example: Roofstock onChain (Real Estate NFT Escrow)
-Roofstock onChain titles houses under individual LLCs and represents ownership as a "Home onChain" NFT. When a property is financed or sold, the NFT is moved into an escrow contract until all real-world conditions (like payment or loan approval) are finalized. 
+Apollo GraphQL server that answers questions about on-chain escrow deals
+(how many go through vs. fall through) by querying the companion subgraph
+[MaxwellDG/evm_directory_subgraph](https://github.com/MaxwellDG/evm_directory_subgraph).
 
-## Network: Ethereum Mainnet
-Key Contract (Escrow/Marketplace): 0x35002C93A4dE9678e0e64c39A3D063A48C8110D8 (Roofstock onChain: Marketplace)
-Key Contract (NFTs/Houses): 0x296B21773B30623f982D42558f62D065bC93213c (Home onChain NFT)
+## Network: Ethereum Sepolia (testnet only)
 
-## Important Subgraph Events
-To track when a deal "falls through" or "executes" on this platform, your subgraph would listen for these specific events from their marketplace and vault contracts:
-SaleExecuted: The successful "Closing." Money is released to the seller, and the NFT (the house) is released to the buyer.
-OfferCreated / OfferAccepted: Marks the "Pending" state where funds are typically locked in the escrow logic.
-OfferCancelled: This is your "Fall Through" signal. If a buyer or seller backs out before the final on-chain execution, this event is triggered, and locked funds are returned. 
+Tracked contract: **Escrow** (UUPS proxy) `0x1Ad0aD503C0769B97DE1d1B2C25521204C935A6b`
+- Verified implementation: `0xfe836e1d0e2daC6cAbd7B710804Aa9F2bDf8Df40` (Blockscout, full match)
+- Created at block 11766363
+- Uses Chainlink `AggregatorV3Interface` price feeds to price deals in USD for fee tiers
 
-## How the "Real Life" part is handled
-These contracts don't magically know the deed was filed at the county office. Instead, they use a Hybrid Legal Model:
-Legal Wrap: You aren't technically buying the "dirt"; you are buying 100% of the LLC that owns the dirt.
-Admin Sign-off: A "Home onChain Admin" (the platform) usually acts as the oracle. Once they verify off-chain that inspections and title docs are clear, they trigger the execute function on the smart contract. 
+> Note: an earlier version of this file named Roofstock onChain contracts
+> (`0x35002C93...10D8`, `0x296B2177...213c`) on Ethereum mainnet. Neither
+> address has any contract code on mainnet or Sepolia, Roofstock onChain has
+> no Sepolia deployment, and its public contracts emit no
+> OfferCreated/OfferAccepted/OfferCancelled/SaleExecuted events.
+
+## Escrow lifecycle (real contract events)
+
+| Intent | Contract event(s) |
+| --- | --- |
+| Offer created | `EscrowCreated` |
+| Offer accepted | `SellerAgreed` + `EscrowFunded` (deal is live once both happened; a seller-created deal is pre-agreed) |
+| Offer cancelled ("fall through" before funding is locked) | `EscrowCancelled` |
+| Sale executed ("closing") | `Released`, or `DisputeResolved` with a 100% seller split |
+| Fell through after funding | `Refunded`, or `DisputeResolved` with a partial split |
+| Disputes | `DisputeRaised`, `DisputeEscalated`, `DisputeCancelled` |
+
+## Queries
+
+```graphql
+{
+  escrowStats { created open succeeded failed successRate }
+  escrows(first: 10, where: { outcome: FAILED }) { id status seller buyer amount events { type blockTimestamp } }
+  escrow(id: "0") { status outcome deposit sellerAmount }
+}
+```
+
+## Configuration
+
+| Env var | Required | Description |
+| --- | --- | --- |
+| `SUBGRAPH_URL` | yes | Query URL of the deployed escrow subgraph (Subgraph Studio or gateway URL) |
+| `SUBGRAPH_API_KEY` | no | Sent as `Authorization: Bearer <key>`; needed for `gateway.thegraph.com` URLs |
+| `APP_ENV` | no | Set to `prod` to disable introspection |
+
+Copy `.env.example` to `.env`, then:
+
+```sh
+pnpm install
+pnpm dev        # or: pnpm start
+pnpm typecheck
+```
