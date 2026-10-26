@@ -48,6 +48,30 @@ const OFFER_QUERY = gql`
     }
 `
 
+const STATS_FIELDS = ["created", "open", "accepted", "succeeded", "failed", "completed", "cancelled", "refunded", "expired", "volume", "volumeUsd"] as const
+
+const OFFER_STATS_QUERY = gql`
+    query EscrowOfferStats {
+        escrowOfferStats(id: "global") {
+            ${STATS_FIELDS.join("\n            ")}
+            updatedAt
+        }
+    }
+`
+
+type OfferStatsRow = Record<(typeof STATS_FIELDS)[number] | "updatedAt", string>
+
+export function withSuccessRate(s: OfferStatsRow | null) {
+    if (!s) {
+        // nothing indexed yet
+        const zeros = Object.fromEntries(STATS_FIELDS.map((f) => [f, "0"]))
+        return { ...zeros, successRate: null, updatedAt: null }
+    }
+    const succeeded = Number(s.succeeded)
+    const closed = succeeded + Number(s.failed)
+    return { ...s, successRate: closed > 0 ? succeeded / closed : null }
+}
+
 type OfferFilter = {
     status?: string | null
     outcome?: string | null
@@ -94,6 +118,10 @@ export const escrowOfferResolvers = {
                 id: args.id.toLowerCase(),
             })
             return data.escrowOffer
+        },
+        escrowOfferStats: async () => {
+            const data = await subgraphClient().request<{ escrowOfferStats: OfferStatsRow | null }>(OFFER_STATS_QUERY)
+            return withSuccessRate(data.escrowOfferStats)
         },
     },
     EscrowOffer: {

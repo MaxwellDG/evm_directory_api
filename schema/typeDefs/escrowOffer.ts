@@ -73,7 +73,30 @@ export const escrowOfferTypeDefs = `#graphql
         buyer: String
     }
 
+    type EscrowOfferStats {
+        created: String!
+        "Offers not yet closed (open or accepted)"
+        open: String!
+        accepted: String!
+        succeeded: String!
+        "cancelled + refunded + expired"
+        failed: String!
+        completed: String!
+        cancelled: String!
+        refunded: String!
+        expired: String!
+        "Total wei paid to sellers"
+        volume: String!
+        "Total USD value (18 decimals) of completed sales"
+        volumeUsd: String!
+        "succeeded / (succeeded + failed), null until an offer has closed"
+        successRate: Float
+        updatedAt: String
+    }
+
     extend type Query {
+        "Aggregated counters for DirectoryEscrow offers (expired offers count as failed)"
+        escrowOfferStats: EscrowOfferStats!
         "Offers on our DirectoryEscrow contract, newest first"
         escrowOffers(first: Int = 20, skip: Int = 0, where: EscrowOfferFilter): [EscrowOffer!]!
         "One offer by id (<contract address>-<offerId>)"
