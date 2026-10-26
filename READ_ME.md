@@ -38,6 +38,22 @@ Tracked contract: **Escrow** (UUPS proxy) `0x1Ad0aD503C0769B97DE1d1B2C25521204C9
 }
 ```
 
+## Our own Escrow (DirectoryEscrow)
+
+The subgraph also indexes the Escrow contract from
+[evm_directory_chain](https://github.com/MaxwellDG/evm_directory_chain) (not deployed to Sepolia yet).
+Offers go `OPEN → ACCEPTED → COMPLETED | REFUNDED | EXPIRED`, or `OPEN → CANCELLED`. `EXPIRED` means the
+offer wasn't settled within the contract's settlement period and the buyer was refunded (anyone, or a
+Chainlink Automation upkeep, can trigger it). Only `COMPLETED` counts as a success.
+
+```graphql
+{
+  escrowOfferStats { created open succeeded failed expired successRate volumeUsd }
+  escrowOffers(first: 10, where: { status: ACCEPTED }) { id side amount usdValue acceptedAt expiresAt expirable }
+  escrowOffer(id: "0x...-1") { status outcome closedBy events { type actor blockTimestamp } }
+}
+```
+
 ## Configuration
 
 | Env var | Required | Description |
