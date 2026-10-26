@@ -1,10 +1,10 @@
 import { ApolloServer } from "@apollo/server"
 import { startStandaloneServer } from "@apollo/server/standalone"
-import { escrowTypeDefs } from "./schema/typeDefs/index.js"
+import { escrowTypeDefs, escrowOfferTypeDefs } from "./schema/typeDefs/index.js"
 import { resolvers } from "./schema/resolvers/index.js"
 
 const server = new ApolloServer({
-    typeDefs: escrowTypeDefs,
+    typeDefs: [escrowTypeDefs, escrowOfferTypeDefs],
     resolvers,
     introspection: process.env.APP_ENV !== "prod"
 })
