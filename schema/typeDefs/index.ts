@@ -1,1 +1,1 @@
-export { bookTypeDefs } from './book.js'
+export { escrowTypeDefs } from './escrow.js'

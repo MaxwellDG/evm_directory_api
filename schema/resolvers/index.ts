@@ -1,7 +1,7 @@
-import { bookResolvers } from './book.js'
+import { escrowResolvers } from './escrow.js'
 
 export const resolvers = {
     Query: {
-        ...bookResolvers.Query,
+        ...escrowResolvers.Query,
     },
 }
