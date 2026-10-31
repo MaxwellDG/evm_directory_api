@@ -1,3 +1,6 @@
+// Load .env when present (Node >= 20.12); real env vars still win.
+try { process.loadEnvFile() } catch {}
+
 import { ApolloServer } from "@apollo/server"
 import { startStandaloneServer } from "@apollo/server/standalone"
 import { escrowTypeDefs, escrowOfferTypeDefs } from "./schema/typeDefs/index.js"
